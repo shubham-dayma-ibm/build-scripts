@@ -1,14 +1,14 @@
-#!/bin/bash -e
+#!/bin/bash -ex
 # -----------------------------------------------------------------------------
 #
-# Package          : pyiceberg
-# Version          : pyiceberg-0.8.1
-# Source repo      : https://github.com/apache/iceberg-python
+# Package          : bcrypt
+# Version          : 4.2.1
+# Source repo      : https://github.com/pyca/bcrypt
 # Tested on        : UBI:9.3
 # Language         : Python
 # Travis-Check     : True
 # Script License   : Apache License, Version 2 or later
-# Maintainer       : Vinod.K1 <Vinod.K1@ibm.com>
+# Maintainer       : Ramnath Nayak <Ramnath.Nayak@ibm.com>
 #
 # Disclaimer       : This script has been tested in root mode on given
 # ==========         platform using the mentioned version of the package.
@@ -18,38 +18,37 @@
 #
 # ---------------------------------------------------------------------------
 
+
 # Variables
-PACKAGE_NAME=pyiceberg
-PACKAGE_VERSION=${1:-pyiceberg-0.8.1}
-PACKAGE_URL=https://github.com/apache/iceberg-python
-PACKAGE_DIR=iceberg-python
-CURRENT_DIR=$(pwd)
+PACKAGE_NAME=bcrypt
+PACKAGE_VERSION=${1:-4.2.1}
+PACKAGE_URL=https://github.com/pyca/bcrypt
+PACKAGE_DIR=bcrypt
+WORK_DIR=$(pwd)
 
-# Install dependencies
-yum install -y git make wget gcc-toolset-13 openssl-devel python3 python3-pip python3-devel
+# Install necessary system dependencies
+yum install -y git wget python3 python3-devel python3-pip zip unzip gcc gcc-c++
 
-export PATH=/opt/rh/gcc-toolset-13/root/usr/bin:$PATH
-export LD_LIBRARY_PATH=/opt/rh/gcc-toolset-13/root/usr/lib64:$LD_LIBRARY_PATH
+#install rust
+curl https://sh.rustup.rs -sSf | sh -s -- -y
+source "$HOME/.cargo/env"  # Update environment variables to use Rust
 
-# Clone the repository
-git clone $PACKAGE_URL
-cd $PACKAGE_DIR
-git checkout $PACKAGE_VERSION
+git clone -b $PACKAGE_VERSION $PACKAGE_URL
+cd bcrypt
 
-#install python dependencies
-pip install tox poetry-core cython setuptools
+pip install setuptools tox setuptools-rust
 
 #install
-if ! pip3 install -e . ; then
+if ! (pip install .) ; then
     echo "------------------$PACKAGE_NAME:Install_fails-------------------------------------"
     echo "$PACKAGE_URL $PACKAGE_NAME"
     echo "$PACKAGE_NAME  |  $PACKAGE_URL | $PACKAGE_VERSION | GitHub | Fail |  Install_Fails"
     exit 1
 fi
 
-# Run tests
-if ! tox ; then
-    echo "------------------$PACKAGE_NAME:Install_success_but_test_fails---------------------"
+#run tests
+if !(tox -e py3); then
+    echo "------------------$PACKAGE_NAME:build_success_but_test_fails---------------------"
     echo "$PACKAGE_URL $PACKAGE_NAME"
     echo "$PACKAGE_NAME  |  $PACKAGE_URL | $PACKAGE_VERSION | GitHub | Fail |  Install_success_but_test_Fails"
     exit 2
