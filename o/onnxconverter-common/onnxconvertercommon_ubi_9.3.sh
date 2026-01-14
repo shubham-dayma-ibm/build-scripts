@@ -6,7 +6,7 @@
 # Source repo      : https://github.com/microsoft/onnxconverter-common
 # Tested on        : UBI:9.3
 # Language         : Python
-# Travis-Check     : True
+# Ci-Check     : True
 # Script License   : Apache License, Version 2 or later
 # Maintainer       : Sai Kiran Nukala <sai.kiran.nukala@ibm.com>
 #
@@ -27,9 +27,23 @@ CURRENT_DIR=$(pwd)
 
 echo "Installing dependencies..."
 
-yum install -y git wget make libtool gcc-toolset-13 gcc-toolset-13-gcc gcc-toolset-13-gcc-c++ gcc-toolset-13-gcc-gfortran clang libevent-devel zlib-devel openssl-devel python python-devel python3.12 python3.12-devel python3.12-pip cmake patch
+yum install -y git wget make libtool gcc-toolset-13 gcc-toolset-13-gcc gcc-toolset-13-gcc-c++ gcc-toolset-13-gcc-gfortran clang libevent-devel zlib-devel openssl-devel python3.12 python3.12-devel python3.12-pip patch
+yum install -y make openssl-devel zlib-devel ncurses-devel
 export PATH=/opt/rh/gcc-toolset-13/root/usr/bin:$PATH
 export LD_LIBRARY_PATH=/opt/rh/gcc-toolset-13/root/usr/lib64:$LD_LIBRARY_PATH
+
+echo "Installing cmake..."
+CMAKE_VERSION=3.29.2
+wget https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}.tar.gz
+tar -xzf cmake-${CMAKE_VERSION}.tar.gz
+cd cmake-${CMAKE_VERSION}
+./bootstrap --prefix=/usr/local --parallel=2
+echo "Installing cmake..."
+make -j2
+echo "Installing cmake..."
+make install
+cmake --version
+cd ..
 
 echo " --------------------------------------------------- OpenBlas Installing --------------------------------------------------- "
 
@@ -84,7 +98,7 @@ build_opts+=(NUM_THREADS=8)
 build_opts+=(NO_AFFINITY=1)
 
 # Build OpenBLAS
-make -j8 ${build_opts[@]} CFLAGS="${CF}" FFLAGS="${FFLAGS}" prefix=${PREFIX}
+make -j2 ${build_opts[@]} CFLAGS="${CF}" FFLAGS="${FFLAGS}" prefix=${PREFIX}
 
 # Install OpenBLAS
 CFLAGS="${CF}" FFLAGS="${FFLAGS}" make install PREFIX="${PREFIX}" ${build_opts[@]}
@@ -107,8 +121,8 @@ cd $CURRENT_DIR
 export PATH=/opt/rh/gcc-toolset-13/root/usr/bin:$PATH
 export LD_LIBRARY_PATH=/opt/rh/gcc-toolset-13/root/usr/lib64:$LD_LIBRARY_PATH
 
-pip3.12 install --upgrade pip setuptools wheel ninja packaging tox pytest build mypy stubs
-pip3.12 install 'cmake==3.31.6'
+python3.12 -m pip install --upgrade pip setuptools wheel ninja packaging tox pytest build mypy stubs
+python3.12 -m pip install 'cmake==3.31.6'
 
 echo " --------------------------------------------------- Abseil-cpp Cloning --------------------------------------------------- "
 
@@ -133,7 +147,7 @@ LIBPROTO_INSTALL=$LIBPROTO_DIR/local/libprotobuf
 echo " --------------------------------------------------- Libprotobuf Installing --------------------------------------------------- "
 
 # Clone Source-code
-PACKAGE_VERSION_LIB="v4.25.3"
+PACKAGE_VERSION_LIB="v4.25.8"
 PACKAGE_GIT_URL="https://github.com/protocolbuffers/protobuf"
 git clone $PACKAGE_GIT_URL -b $PACKAGE_VERSION_LIB
 
@@ -186,7 +200,7 @@ python3.12 setup.py install --cpp_implementation
 
 cd $CURRENT_DIR
 
-pip3.12 install pybind11==2.12.0
+python3.12 -m pip install pybind11==2.12.0
 PYBIND11_PREFIX=$SITE_PACKAGE_PATH/pybind11
 
 export CMAKE_PREFIX_PATH="$ABSEIL_PREFIX;$LIBPROTO_INSTALL;$PYBIND11_PREFIX"
@@ -228,12 +242,12 @@ export CMAKE_ARGS="${CMAKE_ARGS} -DCMAKE_PREFIX_PATH=$CMAKE_PREFIX_PATH"
 
 # Adding this source due to - (Unable to detect linker for compiler `cc -Wl,--version`)
 source /opt/rh/gcc-toolset-13/enable
-pip3.12 install cython meson
-pip3.12 install numpy==2.0.2 
-pip3.12 install parameterized
-pip3.12 install pytest nbval pythran mypy-protobuf
-pip3.12 install scipy==1.15.2 pandas scikit_learn==1.6.1
-sed -i 's/protobuf>=[^ ]*/protobuf==4.25.3/' requirements.txt
+python3.12 -m pip install cython meson
+python3.12 -m pip install numpy==2.0.2 
+python3.12 -m pip install parameterized
+python3.12 -m pip install pytest nbval pythran mypy-protobuf
+python3.12 -m pip install scipy==1.15.2 pandas scikit_learn==1.6.1
+sed -i 's/protobuf>=[^ ]*/protobuf==4.25.8/' requirements.txt
 python3.12 setup.py install 
 
 echo " --------------------------------------------------- Onnx Successfully Installed --------------------------------------------------- "
@@ -247,16 +261,16 @@ cd $PACKAGE_NAME
 git checkout $PACKAGE_VERSION
 git submodule update --init --recursive 
 
-sed -i 's/\bprotobuf==[^ ]*\b/protobuf==4.25.3/g' pyproject.toml
+sed -i 's/\bprotobuf==[^ ]*\b/protobuf==4.25.8/g' pyproject.toml
 sed -i 's/\"onnx\"/\"onnx==1.17.0\"/' pyproject.toml
 sed -i 's/\"numpy\"/\"numpy==2.0.2\"/' pyproject.toml
 sed -i "/tool.setuptools.dynamic/d" pyproject.toml
 sed -i "/onnxconverter_common.__version__/d" pyproject.toml
 
 sed -i 's/\"numpy\"/\"numpy==2.0.2\"/' requirements.txt
-sed -i 's/\bprotobuf==[^ ]*\b/protobuf==4.25.3/g' requirements.txt
+sed -i 's/\bprotobuf==[^ ]*\b/protobuf==4.25.8/g' requirements.txt
 
-pip3.12 install flatbuffers onnxmltools
+python3.12 -m pip install flatbuffers onnxmltools
 
 cd $CURRENT_DIR
 
@@ -265,13 +279,39 @@ echo " --------------------------------------------------- Onnxruntime Installin
 
 git clone https://github.com/microsoft/onnxruntime
 cd onnxruntime
-git checkout d1fb58b0f2be7a8541bfa73f8cbb6b9eba05fb6b
+git checkout v1.21.0
 # Build the onnxruntime package and create the wheel
-sed -i 's/python3/python3.12/g' build.sh
+
 
 echo " --------------------------------------------------- Building Onnxruntime --------------------------------------------------- "
+export CXXFLAGS="-Wno-stringop-overflow"
+export CFLAGS="-Wno-stringop-overflow"
+export LD_LIBRARY_PATH=/OpenBLAS:/OpenBLAS/libopenblas.so.0:$LD_LIBRARY_PATH
+
+#get python version
+PYTHON_VERSION=$(compgen -c | grep -E '^python3\.[0-9]+$' | sort -Vr | head -n 1)
+PYTHON_PATH=$(command -v $PYTHON_VERSION)
+export PYTHON_EXECUTABLE=$PYTHON_PATH
+export PATH=$(dirname "$PYTHON_EXECUTABLE"):$PATH
+sed -i "s/python3/$PYTHON_VERSION/g" build.sh
+
+# Install required Python packages
+$PYTHON_EXECUTABLE -m pip install packaging wheel numpy==2.0.2
+
+# Confirm NumPy installation and get include path
+$PYTHON_EXECUTABLE -c "import numpy; print('NumPy version:', numpy.__version__)"
+NUMPY_INCLUDE=$($PYTHON_EXECUTABLE -c "import numpy; print(numpy.get_include())")
+echo "NumPy include path: $NUMPY_INCLUDE"
+
+# Manually defines Python::NumPy for CMake versions with broken NumPy detection
+sed -i '193i # Fix for Python::NumPy target not found\nif(NOT TARGET Python::NumPy)\n    find_package(Python3 COMPONENTS NumPy REQUIRED)\n    add_library(Python::NumPy INTERFACE IMPORTED)\n    target_include_directories(Python::NumPy INTERFACE ${Python3_NumPy_INCLUDE_DIR})\n    message(STATUS "Manually defined Python::NumPy with include dir: ${Python3_NumPy_INCLUDE_DIR}")\nendif()\n' $CURRENT_DIR/onnxruntime/cmake/onnxruntime_python.cmake
+
+
+sed -i 's|5ea4d05e62d7f954a46b3213f9b2535bdd866803|51982be81bbe52572b54180454df11a3ece9a934|' cmake/deps.txt
+
+
 ./build.sh \
-  --cmake_extra_defines "onnxruntime_PREFER_SYSTEM_LIB=ON" \
+  --cmake_extra_defines "onnxruntime_PREFER_SYSTEM_LIB=ON" "Protobuf_PROTOC_EXECUTABLE=$PROTO_PREFIX/bin/protoc" "Protobuf_INCLUDE_DIR=$PROTO_PREFIX/include" "onnxruntime_USE_COREML=OFF" "Python3_NumPy_INCLUDE_DIR=$NUMPY_INCLUDE" "CMAKE_POLICY_DEFAULT_CMP0001=NEW" "CMAKE_POLICY_DEFAULT_CMP0002=NEW" "CMAKE_POLICY_VERSION_MINIMUM=3.5" \
   --cmake_generator Ninja \
   --build_shared_lib \
   --config Release \
@@ -285,7 +325,7 @@ echo " --------------------------------------------------- Building Onnxruntime 
 # Install the built onnxruntime wheel
 echo " --------------------------------------------------- Installing onnxruntime wheel --------------------------------------------------- "
 cp ./build/Linux/Release/dist/* ./
-pip3.12 install ./*.whl
+python3.12 -m pip install ./*.whl
 # Clean up the onnxruntime repository
 cd $CURRENT_DIR
 rm -rf onnxruntime
@@ -297,6 +337,10 @@ if ! python3.12 setup.py install; then
     echo "$PACKAGE_NAME  | $PACKAGE_VERSION | $OS_NAME | GitHub | Fail |  wheel_built_fails"
     exit 1
 fi
+#build wheel
+cd $CURRENT_DIR/$PACKAGE_DIR
+python3.12 setup.py bdist_wheel --plat-name=linux_$(uname -m)
+mv dist/*.whl "$CURRENT_DIR/"
 
 echo "Running tests for $PACKAGE_NAME..."
 # Test the onnxconverter-common package

@@ -3,13 +3,13 @@
 # -----------------------------------------------------------------------------
 #
 # Package           : vision
-# Version           : v0.21.0
+# Version           : v0.22.0
 # Source repo       : https://github.com/pytorch/vision.git
 # Tested on         : UBI:9.3
 # Language          : Python
-# Travis-Check      : True
+# Ci-Check      : True
 # Script License    : Apache License, Version 2.0
-# Maintainer        : Vinod K <Vinod.K1@ibm.com>
+# Maintainer        : Meet Jani <meet.jani@ibm.com>
 #
 # Disclaimer        : This script has been tested in root mode on given
 # ==========          platform using the mentioned version of the package.
@@ -19,17 +19,23 @@
 #
 # ----------------------------------------------------------------------------
 
+set -ex 
+
 PACKAGE_NAME=vision
-PACKAGE_VERSION=${1:-v0.21.0}
+PACKAGE_VERSION=${1:-v0.22.0}
 PACKAGE_URL=https://github.com/pytorch/vision.git
 OS_NAME=$(cat /etc/os-release | grep ^PRETTY_NAME | cut -d= -f2)
 MAX_JOBS=${MAX_JOBS:-$(nproc)}
+VERSION=${PACKAGE_VERSION#v}
+PYTHON_VERSION=${2:-3.12}
 
 CURRENT_DIR=$(pwd)
 
-yum install -y git make wget python3.12 python3.12-devel python3.12-pip pkgconfig atlas
+yum install -y git make wget python$PYTHON_VERSION python$PYTHON_VERSION-devel python$PYTHON_VERSION-pip pkgconfig atlas
 yum install gcc-toolset-13 -y
 yum install -y make libtool  xz zlib-devel openssl-devel bzip2-devel libffi-devel libevent-devel  patch ninja-build gcc-toolset-13  pkg-config  gmp-devel  freetype-devel
+
+ln /usr/bin/pip$PYTHON_VERSION /usr/bin/pip3 -f && ln /usr/bin/python$PYTHON_VERSION /usr/bin/python3 -f &&  ln /usr/bin/pip$PYTHON_VERSION /usr/bin/pip -f && ln /usr/bin/python$PYTHON_VERSION /usr/bin/python
 
 dnf install -y gcc-toolset-13-libatomic-devel
 
@@ -111,13 +117,13 @@ cd $CURRENT_DIR
 echo "--------------------scipy installing-------------------------------"
 
 #Building scipy
-python3.12 -m pip install beniget==0.4.2.post1 Cython==3.0.11 gast==0.6.0 meson==1.6.0 meson-python==0.17.1 numpy==2.0.2 packaging pybind11 pyproject-metadata pythran==0.17.0 setuptools==75.3.0 pooch pytest build wheel hypothesis ninja patchelf
+python3 -m pip install beniget==0.4.2.post1 Cython gast==0.6.0 meson==1.6.0 meson-python==0.17.1 numpy==2.0.2 packaging pybind11 pyproject-metadata pythran==0.17.0 setuptools==75.3.0 pooch pytest build wheel hypothesis ninja patchelf
 git clone https://github.com/scipy/scipy
 cd scipy/
 git checkout v1.15.2
 git submodule update --init
 echo "instaling scipy......."
-python3.12 -m pip install .
+python3 -m pip install .
 cd $CURRENT_DIR
 
 echo "--------------------abseil-cpp installing-------------------------------"
@@ -137,7 +143,7 @@ export CXX_COMPILER=$(which g++)
 echo "----------------protobuf installing-------------------"
 git clone https://github.com/protocolbuffers/protobuf
 cd protobuf
-git checkout v4.25.3
+git checkout v4.25.8
 
 LIBPROTO_DIR=$(pwd)
 mkdir -p $LIBPROTO_DIR/local/libprotobuf
@@ -186,7 +192,7 @@ git apply set_cpp_to_17_v4.25.3.patch
 
 echo "Installing protobuf...."
 cd python
-python3.12 -m pip install .
+python3 -m pip install .
 cd $CURRENT_DIR
 
 echo "------------ libprotobuf,protobuf installed--------------"
@@ -254,10 +260,12 @@ export LD_LIBRARY_PATH="/protobuf/local/libprotobuf/lib64:${LD_LIBRARY_PATH}"
 export LD_LIBRARY_PATH="/protobuf/third_party/abseil-cpp/local/abseilcpp/lib:${LD_LIBRARY_PATH}"
 
 sed -i "s/cmake/cmake==3.*/g" requirements.txt
-python3.12 -m pip install -r requirements.txt
+python3 -m pip install -r requirements.txt
 
 echo "----------Installing pytorch------------"
-MAX_JOBS=$(nproc) python3.12 setup.py install
+MAX_JOBS=$(nproc) python3 setup.py install
+MAX_JOBS=$(nproc) python3 setup.py bdist_wheel
+cp dist/*.whl /
 cd $CURRENT_DIR
 
 echo "--------------------------------- Installing Opus ---------------------------------"
@@ -379,11 +387,11 @@ cd $CURRENT_DIR
 
 echo "---------------------------Installing FFmpeg------------------"
 #Cloning Source Code
-PACKAGE_VERSION=${1:-n7.1}
+FFMPEG_PACKAGE_VERSION=${1:-n7.1}
 
 git clone https://github.com/FFmpeg/FFmpeg
 cd FFmpeg
-git checkout $PACKAGE_VERSION
+git checkout $FFMPEG_PACKAGE_VERSION
 git submodule update --init
 
 mkdir ffmpeg_prefix
@@ -471,7 +479,7 @@ cd $CURRENT_DIR
 mkdir -p local/ffmpeg
 cp -r FFmpeg/ffmpeg_prefix/* local/ffmpeg/
 
-PACKAGE_VERSION=$(echo "$PACKAGE_VERSION" | sed 's/[^0-9.]//g')
+FFMPEG_PACKAGE_VERSION=$(echo "$FFMPEG_PACKAGE_VERSION" | sed 's/[^0-9.]//g')
 
 export LD_LIBRARY_PATH=${LAME_PREFIX}/lib:${LIBVPX_PREFIX}/lib:${OPUS_PREFIX}/lib:${FFMPEG_PREFIX}/lib:${LD_LIBRARY_PATH}
 
@@ -520,28 +528,48 @@ git checkout 11.1.0
 yum install -y libjpeg-turbo-devel
 git submodule update --init
 
-python3.12 -m pip install .
+python3 -m pip install .
 cd $CURRENT_DIR
 
 echo "--------------------Installing pyav----------------------------"
 git clone https://github.com/PyAV-Org/PyAV
 cd PyAV
-git checkout v13.1.0
+
+# This command prints both versions, one per line, then sorts them using version-aware sort (-V)
+# The smallest version will appear first
+# If the smallest version is not 0.22.0, then VERSION must be less than 0.22.0
+
+if [ "$(printf '%s\n' "$VERSION" "0.22.0" | sort -V | head -n1)" != "0.22.0" ]; then
+    # VERSION is less than 0.22.0
+    git checkout v13.1.0
+else
+    # VERSION is greater than or equal to 0.22.0
+    # This PyAV version must match the runtime PyAV version.
+    git checkout v14.4.0
+    sed -i 's/license = "BSD-3-Clause"/license = {text = "BSD-3-Clause"}/' pyproject.toml
+fi
+
 git submodule update --init
 
 export CFLAGS="${CFLAGS} -I/install-deps/ffmpeg/include"
 export LDFLAGS="${LDFLAGS} -L/install-deps/ffmpeg/lib"
 
-python3.12 setup.py build_ext --inplace
+python3 setup.py build_ext --inplace
 cd $CURRENT_DIR
 
 echo "------------------Building torchvision------------------------"
-PACKAGE_VERSION=${1:-v0.21.0}
 git clone $PACKAGE_URL
 cd $PACKAGE_NAME
 git checkout $PACKAGE_VERSION
 
-if ! (pip3.12 install -v -e . --no-build-isolation); then
+wget https://raw.githubusercontent.com/ppc64le/build-scripts/refs/heads/master/t/torchvision/0001-Exclude-source-that-has-commercial-license_${PACKAGE_VERSION}.patch
+
+# Below patch is needed to exclude the models that come under SWAG license (CC-BY-NC-4.0)
+git apply ./0001-Exclude-source-that-has-commercial-license_${PACKAGE_VERSION}.patch
+
+sed -i '/elif sha != "Unknown":/,+1d' setup.py
+
+if ! python3 setup.py bdist_wheel --dist-dir $CURRENT_DIR; then
     echo "------------------$PACKAGE_NAME:install_fails-------------------------------------"
     echo "$PACKAGE_URL $PACKAGE_NAME"
     echo "$PACKAGE_NAME  |  $PACKAGE_URL | $PACKAGE_VERSION | $OS_NAME | GitHub | Fail |  Install_Fails"
@@ -549,7 +577,20 @@ if ! (pip3.12 install -v -e . --no-build-isolation); then
 fi
 
 cd $CURRENT_DIR
-pip3.12 install pytest pytest-xdist
+
+cd vision
+cd build
+export CMAKE_PREFIX_PATH=/usr/local/lib64/python$PYTHON_VERSION/site-packages/torch/share/cmake/Torch:$LIBPROTO_INSTALL
+cmake ..
+make install
+cp libtorchvision.so /usr/local/lib64/python$PYTHON_VERSION/site-packages/torch/share/cmake/Torch
+cp libtorchvision.so /usr/local/lib64
+
+cd $CURRENT_DIR
+
+python3 -m pip install ./torchvision*.whl
+
+python3 -m pip install pytest pytest-xdist
 
 if ! pytest $PACKAGE_NAME/test/common_extended_utils.py $PACKAGE_NAME/test/common_utils.py $PACKAGE_NAME/test/smoke_test.py $PACKAGE_NAME/test/test_architecture_ops.py $PACKAGE_NAME/test/test_datasets_video_utils_opt.py ; then
     echo "------------------$PACKAGE_NAME:install_success_but_test_fails---------------------"

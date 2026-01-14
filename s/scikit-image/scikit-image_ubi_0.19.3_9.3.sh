@@ -2,11 +2,11 @@
 # -----------------------------------------------------------------------------
 #
 # Package       : scikit-image
-# Version       : v0.19.3
+# Version       : v0.26.0
 # Source repo   : https://github.com/scikit-image/scikit-image
 # Tested on     : UBI:9.3
 # Language      : Python
-# Travis-Check  : False
+# Ci-Check  : False
 # Script License: Apache License 2.0
 # Maintainer    : Vinod K <Vinod.K1@ibm.com>
 #
@@ -19,7 +19,7 @@
 # ----------------------------------------------------------------------------
 
 PACKAGE_NAME=scikit-image
-PACKAGE_VERSION=${1:-v0.19.3}
+PACKAGE_VERSION=${1:-v0.26.0}
 PACKAGE_URL=https://github.com/scikit-image/scikit-image
 
 yum install -y gcc gcc-c++ make python python-devel libtool sqlite-devel ninja-build cmake git wget xz zlib-devel openssl-devel bzip2-devel libffi-devel libevent-devel libjpeg-turbo-devel gcc-gfortran openblas openblas-devel libgomp

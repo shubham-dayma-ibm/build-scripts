@@ -6,7 +6,7 @@
 # Source repo      : https://github.com/google/sentencepiece.git
 # Tested on        : UBI:9.3
 # Language         : Python
-# Travis-Check     : True
+# Ci-Check     : True
 # Script License   : Apache License, Version 2 or later
 # Maintainer       : Haritha Nagothu <haritha.nagothu2@ibm.com>
 #
@@ -71,7 +71,7 @@ echo " -------------------------- Libprotobuf Installing -----------------------
 
 git clone https://github.com/protocolbuffers/protobuf
 cd protobuf
-git checkout v4.25.3
+git checkout v4.25.8
 
 LIBPROTO_DIR=$(pwd)
 mkdir -p $LIBPROTO_DIR/local/libprotobuf

@@ -6,7 +6,7 @@
 # Source repo   : https://github.com/apache/orc
 # Tested on     : UBI 9.3
 # Language      : c
-# Travis-Check  : True
+# Ci-Check  : True
 # Script License: Apache License 2.0
 # Maintainer    : Aastha Sharma <aastha.sharma4@ibm.com>
 #
@@ -102,7 +102,7 @@ echo " --------------------------------------------------- Cloning protobuf ----
 
 git clone https://github.com/protocolbuffers/protobuf
 cd protobuf
-git checkout v4.25.3
+git checkout v4.25.8
 git submodule update --init --recursive
 rm -rf ./third_party/googletest | true
 rm -rf ./third_party/abseil-cpp | true

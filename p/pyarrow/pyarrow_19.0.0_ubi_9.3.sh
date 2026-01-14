@@ -6,7 +6,7 @@
 # Source repo   : https://github.com/apache/arrow
 # Tested on     : UBI:9.3
 # Language      : Python, C
-# Travis-Check  : True
+# Ci-Check  : True
 # Script License: Apache License, Version 2 or later
 # Maintainer    : Haritha Nagothu <haritha.nagothu2@ibm.com>
 # Disclaimer: This script has been tested in root mode on given
@@ -59,7 +59,7 @@ make install
 cd $SCRIPT_DIR 
 
 echo "-------bison installing----------------------"
-wget https://ftp.gnu.org/gnu/bison/bison-3.8.2.tar.gz
+wget https://mirrors.cloud.tencent.com/gnu/bison/bison-3.8.2.tar.gz
 tar -xvf bison-3.8.2.tar.gz
 cd bison-3.8.2
 echo "Configuring bison installation..."
@@ -282,7 +282,7 @@ export CXX_COMPILER=$(which g++)
 #Build libprotobuf
 git clone https://github.com/protocolbuffers/protobuf
 cd protobuf
-git checkout v4.25.3
+git checkout v4.25.8
 
 LIBPROTO_DIR=$(pwd)
 mkdir -p $LIBPROTO_DIR/local/libprotobuf
@@ -806,7 +806,7 @@ fi
 # This is because when the wheel is built using the command:
 # python -m build --wheel --no-isolation --outdir="$SCRIPT_DIR/"
 # If we using 'python3 setup.py bdist_wheel --dist-dir="$SCRIPT_DIR/"' produces a wheel with the expected naming format.
-
+pip install wheel
 echo "Creating wheel....."
 python3 setup.py bdist_wheel --dist-dir="$SCRIPT_DIR/"
 

@@ -19,7 +19,7 @@ description = "High quality MPEG Audio Layer III (MP3) encoder"
 #Classifiers to improve pacakage discoverability
 classifiers = [
   "Development Status :: 5 - Production/Stable",
-  "License :: Apache License 2.0",
+  "License :: LGPL",
 ]
 
 #Project URLs
@@ -40,3 +40,7 @@ lame = ["__init__.py", "bin/*", "lib/*", "include/lame/*", "share/doc/lame/html/
 
 [project.scripts]
 lame = "lame:lameCLI"
+
+[tool.distutils.bdist_wheel]
+plat-name = "linux_ppc64le"  # Explicitly set the platform tag
+universal = false  # Disable universal wheel (forces platform-specific build)

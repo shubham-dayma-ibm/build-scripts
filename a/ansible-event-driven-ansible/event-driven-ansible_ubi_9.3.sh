@@ -6,7 +6,7 @@
 # Source repo   : https://github.com/ansible/event-driven-ansible/
 # Tested on     : UBI:9.3
 # Language      : Python
-# Travis-Check  : True
+# Ci-Check  : True
 # Script License: Apache License, Version 2 or later
 # Maintainer    : Ashwini Kadam <Ashwini.Kadam@ibm.com>,Neha Avhad <Neha.Avhad1@ibm.com>
 #
@@ -20,7 +20,7 @@
 
 PACKAGE_NAME=event-driven-ansible
 PACKAGE_URL=https://github.com/ansible/event-driven-ansible/
-PACKAGE_VERSION=${1:-v2.7.0}
+PACKAGE_VERSION=${1:-v2.8.1}
 
 yum install java-17-openjdk java-17-openjdk-devel java-17-openjdk-headless openssl-devel sudo git wget tar python3-devel python3-pip gcc gcc-c++ cmake.ppc64le systemd-devel zlib-devel krb5-devel rust cargo maven -y
 export JAVA_HOME=/usr/lib/jvm/java-17-openjdk

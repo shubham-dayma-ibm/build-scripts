@@ -10,16 +10,14 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "openblas"
 version = "{PACKAGE_VERSION}"
-requires-python = ">=3.10"
+requires-python = ">=3.9"
 description = "Provides OpenBLAS for python packaging"
 readme = "README.md"
 classifiers = [
   "Development Status :: 5 - Production/Stable",
   "Programming Language :: C++",
-  "License :: Apache License 2.0",
+  "License :: BSD 3-Clause",
 ]
-
-license = {file = "LICENSE.txt"}
 
 [project.urls]
 homepage = "https://github.com/OpenMathLib/OpenBLAS"

@@ -7,7 +7,7 @@ CURRENT_DIR="${PWD}"
 EXIT_CODE=0
 
 #install gcc
-yum install gcc-toolset-13 -y
+yum install -y gcc-toolset-13 zip unzip 
 source /opt/rh/gcc-toolset-13/enable
 gcc --version
 
@@ -32,7 +32,7 @@ install_python_version() {
             echo "Installing dependencies required for python installation..."
             yum install -y sudo zlib-devel wget ncurses git
             echo "Installing..."
-            yum install -y make cmake openssl-devel
+            yum install -y make cmake openssl-devel xz xz-devel
             echo "Installing..."
             yum install -y libffi libffi-devel sqlite sqlite-devel sqlite-libs bzip2-devel
             echo "Starting python installing..."
@@ -53,7 +53,7 @@ install_python_version() {
             echo "Installing dependencies required for python installation..."
             yum install -y sudo zlib-devel wget ncurses git
             echo "Installing..."
-            yum install -y make cmake openssl-devel
+            yum install -y make cmake openssl-devel xz xz-devel
             echo "Installing..."
             yum install -y libffi libffi-devel sqlite sqlite-devel sqlite-libs bzip2-devel
             echo "Starting python installing..."
@@ -92,8 +92,8 @@ format_build_script() {
         sed -i '/-m venv/d' "$TEMP_BUILD_SCRIPT_PATH"
         sed -i '/bin\/activate/d' "$TEMP_BUILD_SCRIPT_PATH"
         sed -i '/^\s*deactivate\s*$/d' "$TEMP_BUILD_SCRIPT_PATH"
-        sed -i '/yum install/{s/\b\(python\|python-devel\|python-pip\)\b[[:space:]]*//g}' "$TEMP_BUILD_SCRIPT_PATH"
-        sed -i '/dnf install/{s/\b\(python\|python-devel\|python-pip\)\b[[:space:]]*//g}' "$TEMP_BUILD_SCRIPT_PATH"
+        sed -i '/yum install/{s/\(python\|python-devel\|python-pip\)\([[:space:]]\|$\)//g; s/[[:space:]]\+/ /g}' "$TEMP_BUILD_SCRIPT_PATH"
+        sed -i '/dnf install/{s/\(python\|python-devel\|python-pip\)\([[:space:]]\|$\)//g; s/[[:space:]]\+/ /g}' "$TEMP_BUILD_SCRIPT_PATH"
         sed -i 's/\bpython3 -m pytest/pytest/g' "$TEMP_BUILD_SCRIPT_PATH"
         sed -i "s/tox -e py[0-9]\{2,3\}\([[:space:]]*.*\)\?/tox -e py${PYTHON_VERSION//./}\1/g" "$TEMP_BUILD_SCRIPT_PATH"
         sed -i 's/^[[:space:]]*exit[[:space:]]\+0[[:space:]]*$//' "$TEMP_BUILD_SCRIPT_PATH"
@@ -122,10 +122,7 @@ cleanup() {
 # Function to modify the metadata file after wheel creation
 modify_metadata_file() {
     local wheel_path="$1"
-
-    # Installing necessary dependencies
-    yum install -y zip unzip > /dev/null
-
+    
     # Create a temporary directory for unzipping the wheel file
     temp_dir="temp_directory"
     mkdir -p "$temp_dir"
@@ -177,7 +174,7 @@ modify_metadata_file() {
         wheel_file_name=$(basename "$wheel_path")
 
         # Repack wheel
-        cd "$temp_dir" && zip -q -r "$CURRENT_DIR/$wheel_file_name" ./*
+        cd "$temp_dir" && zip -q -6 -r "$CURRENT_DIR/$wheel_file_name" ./*
 
         echo "Added IBM classifier to $wheel_path"
     fi
@@ -194,7 +191,7 @@ fi
 echo "Processing Package with Python $PYTHON_VERSION"
 
 # Create and activate virtual environment
-VENV_DIR="$CURRENT_DIR/pyvenv_$PYTHON_VERSION"
+VENV_DIR="$(realpath -m "${CURRENT_DIR}/pyvenv_${PYTHON_VERSION}")"
 create_venv "$VENV_DIR" "$PYTHON_VERSION"
 
 echo "=============== Running package build-script starts =================="

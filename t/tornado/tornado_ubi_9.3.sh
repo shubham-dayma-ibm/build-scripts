@@ -6,7 +6,7 @@
 # Source repo      : https://github.com/tornadoweb/tornado
 # Tested on	: UBI:9.3
 # Language      : Python
-# Travis-Check  : True
+# Ci-Check  : True
 # Script License: Apache License, Version 2 or later
 # Maintainer    : ICH <ich@us.ibm.com>
 #
@@ -42,8 +42,10 @@ pip install build tox wheel
 python3 setup.py sdist
 
 cd dist/
-tar -zxvf tornado-6.4.2.tar.gz
-cd tornado-6.4.2
+VERSION_NUMBER="${PACKAGE_VERSION#v}"
+tar -zxvf tornado-"$VERSION_NUMBER".tar.gz
+cd tornado-"$VERSION_NUMBER"
+
 #install
 if ! pip install -e . ; then
     echo "------------------$PACKAGE_NAME:Install_fails-------------------------------------"

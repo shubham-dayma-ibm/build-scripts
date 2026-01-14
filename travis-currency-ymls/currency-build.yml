@@ -1,3 +1,4 @@
+
 os: linux
 dist: focal
 arch: ppc64le
@@ -6,7 +7,6 @@ language: shell
 branches:
   only:
     - master
-    - python-ecosystem
 
 env:
   global:
@@ -16,8 +16,14 @@ env:
 
 services:
   - docker
-
+  
+before_script:
+  - sudo find /etc/apt/sources.list.d/ -type f -name '*pgdg*' -exec rm -f {} + || true
+  
 before_install:
+    - sudo sed -i.bak '/apt\.postgresql\.org/d' /etc/apt/sources.list || true
+    - sudo find /etc/apt/sources.list.d/ -type f -name '*pgdg*' -exec rm -f {} + || true
+    - sudo apt clean
     - sudo apt update -y
     - sudo apt install -y jq; jq --version
    
@@ -74,6 +80,7 @@ jobs:
         - echo "wheel build python 3.9"
         - source variable.sh
         - chmod +x ./script/build_wheels.sh; bash ./script/build_wheels.sh;
+        - sudo chmod a+r *.whl
         - WHEEL_FILE=*.whl
         - chmod +x ./script/upload-scripts/upload_wheel.sh; bash ./script/upload-scripts/upload_wheel.sh $WHEEL_FILE
       workspaces:
@@ -91,6 +98,7 @@ jobs:
         - echo "wheel build python 3.10"
         - source variable.sh
         - chmod +x ./script/build_wheels.sh; bash ./script/build_wheels.sh;
+        - sudo chmod a+r *.whl
         - WHEEL_FILE=*.whl
         - chmod +x ./script/upload-scripts/upload_wheel.sh; bash ./script/upload-scripts/upload_wheel.sh $WHEEL_FILE
       workspaces:
@@ -107,6 +115,7 @@ jobs:
         - echo "wheel build python 3.11"
         - source variable.sh
         - chmod +x ./script/build_wheels.sh; bash ./script/build_wheels.sh;
+        - sudo chmod a+r *.whl
         - WHEEL_FILE=*.whl
         - chmod +x ./script/upload-scripts/upload_wheel.sh; bash ./script/upload-scripts/upload_wheel.sh $WHEEL_FILE
       workspaces:
@@ -122,6 +131,7 @@ jobs:
         - echo "wheel build python 3.12"
         - source variable.sh
         - chmod +x ./script/build_wheels.sh; bash ./script/build_wheels.sh;
+        - sudo chmod a+r *.whl
         - WHEEL_FILE=*.whl
         - chmod +x ./script/upload-scripts/upload_wheel.sh; bash ./script/upload-scripts/upload_wheel.sh $WHEEL_FILE
       workspaces:
@@ -138,6 +148,7 @@ jobs:
         - echo "wheel build python 3.13"
         - source variable.sh
         - chmod +x ./script/build_wheels.sh; bash ./script/build_wheels.sh;
+        - sudo chmod a+r *.whl
         - WHEEL_FILE=*.whl
         - chmod +x ./script/upload-scripts/upload_wheel.sh; bash ./script/upload-scripts/upload_wheel.sh $WHEEL_FILE
       workspaces:
@@ -290,3 +301,24 @@ jobs:
         - find image_grype -mindepth 1 -exec mv -t image {} + 2>/dev/null || true
         - tar cvzf image_scanner.tar.gz image
         - chmod +x ./script/upload-scripts/upload_file.sh; bash ./script/upload-scripts/upload_file.sh image_scanner.tar.gz
+
+    - stage: final_summary
+      name: "Final Summary Stage"
+
+      before_script:
+        - echo "=== Setting up Python environment ==="
+        - python -m venv venv
+        - source venv/bin/activate
+        - python -m pip install --upgrade pip
+        - pip install requests deprecated xlsxwriter packaging
+     
+      workspaces:
+        use:
+          - build_cache
+          - package_cache
+
+      script:
+        - chmod +x process_bom/*.py || true
+        - export PYTHONPATH="/tmp/_actions-runner-working-dir/build-scripts/build-scripts:/tmp/_actions-runner-working-dir/build-scripts/build-scripts/process_bom"
+        - echo "=== Running currency processor ==="
+        - python -m process_bom.run_currency_processor

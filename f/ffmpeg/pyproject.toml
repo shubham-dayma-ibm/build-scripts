@@ -20,7 +20,7 @@ description = "Cross-platform solution to record, convert and stream audio and v
 classifiers = [
   "Development Status :: 5 - Production/Stable",
   "Programming Language :: C++",
-  "License :: Apache License 2.0",
+  "License :: GPL 3",
 ]
 
 dependencies = [
@@ -44,3 +44,7 @@ where = ["local"]
 #Package data to add bazel in wheel, this is needed as its not a .py file
 [tool.setuptools.package-data]
 ffmpeg = ["bin/*", "lib/**/*", "include/**/*", "share/**/*"]
+ 
+[tool.distutils.bdist_wheel]
+plat-name = "linux_ppc64le"  # Explicitly set the platform tag
+universal = false  # Disable universal wheel (forces platform-specific build)

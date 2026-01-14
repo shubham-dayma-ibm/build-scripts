@@ -6,7 +6,7 @@
 # Source repo   : https://github.com/huggingface/tokenizers
 # Tested on     : UBI:9.3
 # Language      : C,Python
-# Travis-Check  : True
+# Ci-Check  : True
 # Script License: Apache License 2.0
 # Maintainer    : Vinod K <Vinod.K1@ibm.com>
 #
@@ -32,7 +32,7 @@ export LD_LIBRARY_PATH=/opt/rh/gcc-toolset-13/root/usr/lib64:$LD_LIBRARY_PATH
 echo "Cloning and installing..."
 git clone https://github.com/apache/arrow
 cd arrow/
-git checkout apache-arrow-15.0.1
+git checkout apache-arrow-19.0.1
 
 git submodule update --init
 export PARQUET_TEST_DATA="${PWD}/cpp/submodules/parquet-testing/data"
