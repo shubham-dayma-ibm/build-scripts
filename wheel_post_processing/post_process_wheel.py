@@ -9,7 +9,7 @@ from openpyxl import load_workbook
 import ibm_boto3
 from ibm_botocore.client import Config
 from pathlib import Path
-from packages_tags import package_tags
+from package_tags import package_tags
 from copy import deepcopy
 # =========================
 # CONFIGURATION
