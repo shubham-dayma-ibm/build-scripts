@@ -11,6 +11,7 @@ from ibm_botocore.client import Config
 from pathlib import Path
 from package_tags import package_tags
 from copy import deepcopy
+import re
 # =========================
 # CONFIGURATION
 # =========================
@@ -76,6 +77,22 @@ def upload_to_ibm_cos(package, version, wheel_name, source, sha256):
     except Exception as e:
         return False
 
+
+def normalize_docker_name(name: str) -> str:
+    # lowercase
+    name = name.lower()
+
+    # replace invalid characters with hyphen
+    name = re.sub(r"[^a-z0-9_.-]", "-", name)
+
+    # docker name must start with alphanumeric
+    name = re.sub(r"^[^a-z0-9]+", "", name)
+
+    # collapse multiple hyphens
+    name = re.sub(r"-{2,}", "-", name)
+
+    return name
+
 def run_cmd(cmd, cwd):
     """
     Run shell command and return True/False
@@ -138,6 +155,8 @@ def process_row(row_idx, sheet, headers, testing_wheel_dir, build_log_dir):
 
         build_script_trigger_with_version_cell.value = str(identified_version_tag)
 
+        process_container_name = normalize_docker_name(f"{pkg}_{identified_version_tag}_{pyver}")
+
         # Create export_rebuild_wheel.sh
         export_script = work_dir / "export_rebuild_wheel.sh"
         with export_script.open("w") as f:
@@ -146,7 +165,7 @@ def process_row(row_idx, sheet, headers, testing_wheel_dir, build_log_dir):
             f.write(f"export PYTHON_VERSION={pyver}\n")
             f.write(f"export VERSION_SUFFIX={version_suffix}\n")
             f.write(f"export REPO_MAIN_DIR={REPO_MAIN_DIR}\n")
-            f.write(f"export PROCESS_CONTAINER_NAME={pkg}_{identified_version_tag}_{pyver}\n")
+            f.write(f"export PROCESS_CONTAINER_NAME={process_container_name}\n")
 
         # Make executable
         export_script.chmod(0o755)
