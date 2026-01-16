@@ -19,7 +19,7 @@ else
 fi
 
 CUR_DIR=$(pwd)
-cd "$REPO_MAIN_DIR/$package_dirpath"
+cd "$REPO_MAIN_DIR$package_dirpath"
 echo "printing the list of contents"
 pwd
 ls -ltr

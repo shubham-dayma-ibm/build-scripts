@@ -16,7 +16,7 @@ import re
 # CONFIGURATION
 # =========================
 
-EXCEL_FILE = "packages_to_process_non_noarch-testing.xlsx"
+EXCEL_FILE = "packages_to_process_non_noarch-v1.xlsx"
 WORK_BASE_DIR = Path.cwd()
 MAX_WORKERS = 64  # safe default for 144-core system
 REPO_MAIN_DIR = "/root/shubham_playground/"
@@ -138,6 +138,8 @@ def process_row(row_idx, sheet, headers, testing_wheel_dir, build_log_dir):
     modified_wheel_name_cell = sheet.cell(row=row_idx, column=headers["modified_wheel_name"])
     modified_wheel_sha256_cell = sheet.cell(row=row_idx, column=headers["modified_wheel_sha256"])
     build_script_trigger_with_version_cell = sheet.cell(row=row_idx, column=headers["build_script_trigger_with_version"])
+
+    pkg = pkg.lower()
 
     work_dir = WORK_BASE_DIR / wheel_name.replace('.whl', "")
 
