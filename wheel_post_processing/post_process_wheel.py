@@ -23,12 +23,12 @@ REPO_MAIN_DIR = "/root/shubham_playground/"
 READ_BUILDINFO_SCRIPT = "read_buildinfo.sh"
 BUILD_WHEEL_SCRIPT = "build_wheels.sh"
 
-# TODO: Add other files on which Vipul is working
 FILES_TO_COPY = [
         READ_BUILDINFO_SCRIPT,
         BUILD_WHEEL_SCRIPT,
         "create_wheel_wrapper.sh",
-        "build_wheels.py"
+        "build_wheels.py",
+        "license_suffix.py"
     ]
 
 
@@ -146,7 +146,7 @@ def process_row(row_idx, sheet, headers, testing_wheel_dir, build_log_dir):
             f.write(f"export PYTHON_VERSION={pyver}\n")
             f.write(f"export VERSION_SUFFIX={version_suffix}\n")
             f.write(f"export REPO_MAIN_DIR={REPO_MAIN_DIR}\n")
-            f.write(f"export PROCESS_CONTAINER_NAME={wheel_name.replace('.whl', "")}\n")
+            f.write(f"export PROCESS_CONTAINER_NAME={pkg}_{identified_version_tag}_{pyver}\n")
 
         # Make executable
         export_script.chmod(0o755)
@@ -160,44 +160,40 @@ def process_row(row_idx, sheet, headers, testing_wheel_dir, build_log_dir):
         # Step 4: build_wheel.sh
         if not run_cmd(f"bash {BUILD_WHEEL_SCRIPT}", work_dir):
             if (work_dir / "build_log").exists():
-                shutil.move(work_dir / "build_log", f"{build_log_dir}/{wheel_name.replace('.whl', "")}")
+                shutil.move(work_dir / "build_log", f"{build_log_dir}/{wheel_name.replace('.whl', '')}")
             with excel_lock:
                 status_cell.value = "Failed with build_wheel.sh"
             return
 
-        # TODO: To be tested below status type
         # Step 5: audit checks
         if (work_dir / "audit_wheel_skipped").exists():
-            shutil.move(work_dir / "build_log", f"{build_log_dir}/{wheel_name.replace('.whl', "")}")
+            shutil.move(work_dir / "build_log", f"{build_log_dir}/{wheel_name.replace('.whl', '')}")
             with excel_lock:
                 status_cell.value = "Audit Wheel Skip"
             return
 
         if (work_dir / "audit_wheel_errored").exists():
-            shutil.move(work_dir / "build_log", f"{build_log_dir}/{wheel_name.replace('.whl', "")}")
+            shutil.move(work_dir / "build_log", f"{build_log_dir}/{wheel_name.replace('.whl', '')}")
             with excel_lock:
                 status_cell.value = "Audit wheel failed"
             return
 
         # Step 6: wheel existence
-        wheels = list(work_dir.glob("*.whl"))
+        wheels = list(work_dir.glob("wheelhouse/*.whl"))
         if not wheels:
-            shutil.move(work_dir / "build_log", f"{build_log_dir}/{wheel_name.replace('.whl', "")}")
+            shutil.move(work_dir / "build_log", f"{build_log_dir}/{wheel_name.replace('.whl', '')}")
             with excel_lock:
-                status_cell.value = "Wheel Missing"
+                status_cell.value = "Missing Repaired Wheel"
             return
 
         # Step 7: upload
         wheel_names = []
-        wheel_sha256 = []
+        wheel_sha256 = ""
+        if (work_dir / "sha256.sha").exists():
+            with open(f"{work_dir}/sha256.sha", "r") as f:
+                wheel_sha256 = f.read().split()[0]
+
         for whl in wheels:
-            # TODO: to be tested
-            sha256 = ""
-            sha_file = whl.with_suffix(whl.suffix + ".sha256")
-            if sha_file.exists():
-                with open(f"{whl}.sha256", "r") as f:
-                    sha256 = f.read().split()[0]
-            
             # Let's not upload wheel directly to COS, validate it and later upload it with different script
             # if not upload_to_ibm_cos(pkg, ver, whl.name, whl, sha256):
             #     with excel_lock:
@@ -205,14 +201,12 @@ def process_row(row_idx, sheet, headers, testing_wheel_dir, build_log_dir):
             #     return
 
             wheel_names.append(whl.name)
-            wheel_sha256.append(sha256)
             shutil.move(str(whl), testing_wheel_dir / whl.name)
 
         with excel_lock:
             status_cell.value = "Success"
             modified_wheel_name_cell.value = ",".join(wheel_names)
-            modified_wheel_sha256_cell.value = ",".join(wheel_sha256)
-
+            modified_wheel_sha256_cell.value = wheel_sha256
     except:
         import traceback
         traceback.print_exc()
@@ -220,11 +214,9 @@ def process_row(row_idx, sheet, headers, testing_wheel_dir, build_log_dir):
         # Cleanup
         shutil.rmtree(work_dir, ignore_errors=True)
 
-
 # =========================
 # MAIN
 # =========================
-
 def main():
     # Upload wheels post validation, with different script
     # create_cos_client()

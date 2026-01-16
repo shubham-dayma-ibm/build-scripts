@@ -164,4 +164,20 @@ echo "export TESTED_ON=$tested_on" >> $CUR_DIR/variable.sh
 
 chmod +x $CUR_DIR/variable.sh
 cat $CUR_DIR/variable.sh
+
+# GENERATE SHA256
+BUILD_SCRIPT_DATE=$(git log -1 --format=%ci -- "${build_script}")
+
+# Default PACKAGE_LANGUAGE
+PACKAGE_LANGUAGE=${PACKAGE_LANGUAGE:-python}
+
+# Construct the string to hash
+string_to_hash="${PACKAGE_NAME}_${VERSION}_${PACKAGE_LANGUAGE}_${PYTHON_VERSION}_${BUILD_SCRIPT_DATE}"
+
+# Generate SHA and save to .sha file
+echo -n "$string_to_hash" | sha256sum | awk '{print $1}' > $CUR_DIR/sha256.sha
+
+# print the SHA
+echo "SHA successfully generated for $string_to_hash"
+
 cd $CUR_DIR

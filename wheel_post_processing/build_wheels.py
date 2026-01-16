@@ -22,13 +22,13 @@ def trigger_build_wheel(wrapper_file, python_version, image_name, file_name, ver
  
     # Extract just the file names    
     # script_name = file_name.split("/")[1]
- 
+    
     try:
         # Command to run only the main script (which uses the additional file internally)
         command = [
             "bash",
             "-c",
-            f"cd /home/tester/ && ./{wrapper_file} {python_version} {file_name} {version}"
+            f"cd /home/tester/ && ./{wrapper_file} {python_version} {file_name} {os.getenv('VERSION_SUFFIX')} {version}"
         ]
 
         # Run container
