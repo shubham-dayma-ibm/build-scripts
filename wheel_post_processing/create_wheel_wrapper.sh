@@ -255,6 +255,7 @@ if [ "$wheel_count" -eq 1 ]; then
     if echo "$audit_output" | grep -q "ValueError: Cannot repair wheel"; then
         echo "Auditwheel errored for $wheel_file"
         touch "$CURRENT_DIR/audit_wheel_errored"
+        echo "$audit_output"
     elif echo "$audit_output" | grep -q "This does not look like a platform wheel"; then
         echo "Auditwheel skipped for $wheel_file (pure Python wheel)"
         touch "$CURRENT_DIR/audit_wheel_skipped"
@@ -282,6 +283,7 @@ if [ "$wheel_count" -eq 1 ]; then
 else
     echo "Wheel count is $wheel_count (0 or more than 1), marking as errored"
     touch "$CURRENT_DIR/audit_wheel_errored"
+    echo "$audit_output"
 fi
 
 echo "Auditwheel section completed."

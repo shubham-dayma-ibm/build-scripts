@@ -14,7 +14,7 @@ import tempfile
 import sys
 import hashlib
 import base64
-import json
+
 # License extraction utilities
 LICENSE_PATTERN = re.compile(r"^(LICENSE|COPYING)(\..*)?$")
 LICENSE_SEPARATOR = "----"  # Hardcoded separator for both files
@@ -48,6 +48,8 @@ def normalize_so_name(so_name):
 
 def find_all_so_anywhere(so_name):
     result = run_command(["find", ".", "-type", "f", "-name", so_name])
+    if len(result.stdout) == 0:
+        result = run_command(["find", "/", "-type", "f", "-name", so_name])
     return result.stdout.strip().splitlines()
 
 def get_rpm_package(so_path):
@@ -223,46 +225,6 @@ def regenerate_record(extract_path, dist_info_dir):
     with open(record_path, "w", encoding="utf-8") as f:
         f.write("\n".join(records))
 
-def sort_sbom(sbom: dict) -> dict:
-    # Sort metadata.tools
-    tools = sbom.get("metadata", {}).get("tools")
-    if isinstance(tools, list):
-        tools.sort(key=lambda x: x.get("name", ""))
-
-    # Sort components by name
-    components = sbom.get("components")
-    if isinstance(components, list):
-        components.sort(key=lambda x: x.get("name", ""))
-
-    # Sort dependencies and their dependsOn lists
-    dependencies = sbom.get("dependencies")
-    if isinstance(dependencies, list):
-        dependencies.sort(key=lambda x: x.get("ref", ""))
-        for dep in dependencies:
-            if isinstance(dep.get("dependsOn"), list):
-                dep["dependsOn"].sort()
-
-    return sbom
-
-
-def sort_sbom_file(path: str):
-    with open(path, "r", encoding="utf-8") as f:
-        sbom = json.load(f)
-
-    sbom = sort_sbom(sbom)
-
-    dir_name = os.path.dirname(os.path.abspath(path))
-    with tempfile.NamedTemporaryFile(
-        "w",
-        encoding="utf-8",
-        dir=dir_name,
-        delete=False
-    ) as tmp:
-        json.dump(sbom, tmp, indent=2, sort_keys=False)
-        tmp.write("\n")
-
-    os.replace(tmp.name, path)
-
 
 # Main processing function
 def process_wheel(wheel_path, suffix):
@@ -308,14 +270,7 @@ def process_wheel(wheel_path, suffix):
             update_metadata_version(dist_info, new_version)
             dist_info = rename_dist_info_dir(extract_path, old_version, new_version)
             regenerate_record(extract_path, dist_info)
-            # Sort SBOM after version suffix
-            for root, _, files in os.walk(extract_path):
-                if root.endswith(os.path.join(".dist-info", "sboms")):
-                    for name in files:
-                        if name.lower().endswith(".json"):
-                            sort_sbom_file(os.path.join(root, name))
-            # SBOM changed → regenerate RECORD again
-            regenerate_record(extract_path, dist_info)
+
         # Pack wheel
         subprocess.run(["wheel", "pack", extract_path, "-d", wheel_dir], check=True)
 
