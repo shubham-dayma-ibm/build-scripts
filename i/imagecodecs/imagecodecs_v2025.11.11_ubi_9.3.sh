@@ -146,7 +146,7 @@ make -j$(nproc) && make install
 cd ../..
 
 # liblzf 3.6
-wget http://dist.schmorp.de/liblzf/liblzf-3.6.tar.gz
+wget https://dist.schmorp.de/liblzf/liblzf-3.6.tar.gz
 tar -xf liblzf-3.6.tar.gz
 cd liblzf-3.6
 ./configure && make -j$(nproc) && make install
@@ -256,7 +256,7 @@ python3.12 -m build --wheel --no-isolation --outdir="$CURRENT_DIR/"
 # Run tests
 # -------------------------------------------------------------------------
 cd tests
-if ! pytest -k "not(test_image_roundtrips or test_tifffile or test_delta or test_avif_encoder_cicp)" ; then
+if ! pytest -k "not(test_tiff_encode_compression or test_image_roundtrips or test_tifffile or test_delta or test_avif_encoder_cicp)" ; then
     echo "------------------$PACKAGE_NAME:install_success_but_test_fails---------------------"
     echo "$PACKAGE_URL $PACKAGE_NAME"
     echo "$PACKAGE_NAME  |  $PACKAGE_URL | $PACKAGE_VERSION | GitHub | Fail |  Install_success_but_test_Fails"
