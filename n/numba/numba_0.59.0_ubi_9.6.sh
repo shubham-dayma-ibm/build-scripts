@@ -2,13 +2,13 @@
 # -----------------------------------------------------------------------------
 #
 # Package       : numba
-# Version       : 0.62.0
+# Version       : 0.59.0
 # Source repo   : https://github.com/numba/numba
-# Tested on     : UBI:9.3
+# Tested on     : UBI:9.6
 # Language      : Python
 # Ci-Check  : True
 # Script License: Apache License, Version 2 or later
-# Maintainer    : Sakshi Jain <sakshi.jain16@ibm.com>
+# Maintainer    : Rushikesh Sathe <Rushikesh.Sathe1@ibm.com>
 #
 # Disclaimer: This script has been tested in root mode on the given
 # platform using the mentioned version of the package.
@@ -19,7 +19,7 @@
 # -----------------------------------------------------------------------------
 
 PACKAGE_NAME=numba
-PACKAGE_VERSION=${1:-0.62.0}
+PACKAGE_VERSION=${1:-0.59.0}
 PACKAGE_URL=https://github.com/numba/numba
 PACKAGE_DIR=numba
 WORKING_DIR=$(pwd)
@@ -27,7 +27,7 @@ NUMERIC_VERSION=$(echo "$PACKAGE_VERSION" | grep -oP '^\d+(\.\d+){0,2}')
 
 # Install necessary  dependencies
 
-yum install -y git make wget python3.12 python3.12-devel python3.12-pip gcc-toolset-13 
+yum install -y git make wget python3.12 python3.12-devel python3.12-pip gcc-toolset-13
 export PATH=/opt/rh/gcc-toolset-13/root/usr/bin:$PATH
 export LD_LIBRARY_PATH=/opt/rh/gcc-toolset-13/root/usr/lib64:$LD_LIBRARY_PATH
 export LIBRARY_PATH=/opt/rh/gcc-toolset-13/root/usr/lib/gcc/ppc64le-redhat-linux/13:$LIBRARY_PATH
@@ -37,60 +37,39 @@ yum install -y git make wget openssl-devel bzip2-devel libffi-devel zlib-devel c
 
 echo "-------------------Installing llvmlite----------------------"
 
-LLVMLITE_PACKAGE_NAME=llvmlite
-# Determine the llvmlite version based on the Numba package version:
-# - If Numba is 0.62.0 with dev/rc suffix → use llvmlite v0.44.0rc1
-# - If Numba version >= 0.62.0 → use llvmlite v0.45.0dev0
-# - If Numba version < 0.62.0 → use llvmlite v0.44.0rc1
-if [[ "$NUMERIC_VERSION" ==  0.62.0 && "$PACKAGE_VERSION" =~ dev|rc ]]; then
-    LLVMLITE_VERSION="v0.44.0rc1"
-elif [[ "$(printf '%s\n' "$PACKAGE_VERSION" "0.62.0" | sort -V | head -n1)" == "0.62.0" ]]; then
-    LLVMLITE_VERSION="v0.45.0dev0"
-else
-    LLVMLITE_VERSION="v0.44.0rc1"
-fi
-LLVMLITE_PACKAGE_URL="https://github.com/numba/llvmlite"
 LLVM_PROJECT_GIT_URL="https://github.com/llvm/llvm-project.git"
-LLVM_PROJECT_GIT_TAG="llvmorg-15.0.7"
+LLVM_PROJECT_GIT_TAG="llvmorg-14.0.6"
+
+LLVMLITE_PACKAGE_URL="https://github.com/numba/llvmlite"
+LLVMLITE_VERSION="v0.42.0"
+
+LLVM_SRC_DIR=$WORKING_DIR/llvm-project
+LLVM_INSTALL_DIR=$WORKING_DIR/llvm-install
 
 git clone -b ${LLVM_PROJECT_GIT_TAG} ${LLVM_PROJECT_GIT_URL}
 git clone -b ${LLVMLITE_VERSION} ${LLVMLITE_PACKAGE_URL}
 
 python3.12 -m pip install ninja
 
-# Build LLVM project
-cd "$WORKING_DIR/llvm-project"
-git apply "$WORKING_DIR/llvmlite/conda-recipes/llvm15-clear-gotoffsetmap.patch"
-git apply "$WORKING_DIR/llvmlite/conda-recipes/llvm15-remove-use-of-clonefile.patch"
-cp "$WORKING_DIR/llvmlite/conda-recipes/llvmdev/build.sh" .
-chmod 777 "$WORKING_DIR/llvm-project/build.sh" && "$WORKING_DIR/llvm-project/build.sh"
+cd $LLVM_SRC_DIR
+git fetch --all --tags
+git checkout $LLVM_PROJECT_GIT_TAG
 
-# Set LLVM_CONFIG environment variable
-export LLVM_CONFIG="/llvm-project/build/bin/llvm-config"
+# Build & install LLVM
+cmake -S llvm -B build -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_INSTALL_PREFIX=$LLVM_INSTALL_DIR \
+  -DLLVM_ENABLE_PROJECTS="clang;lld" \
+  -DLLVM_TARGETS_TO_BUILD="PowerPC"
 
-# Check for llvm-config path
-LLVM_CONFIG_PATH=$(which llvm-config)
+cmake --build build --target install -j$(nproc)
+export PATH=$LLVM_INSTALL_DIR/bin:$PATH
 
-# If llvm-config is not found in the system path, use the local path from the build
-if [ -z "$LLVM_CONFIG_PATH" ]; then
-    echo "llvm-config not found in PATH, using local path."
-    export LLVM_CONFIG="$WORKING_DIR/llvm-project/build/bin/llvm-config"
-else
-    echo "llvm-config found at: $LLVM_CONFIG_PATH"
-    export LLVM_CONFIG="$LLVM_CONFIG_PATH"
-fi
-
-# Check if llvm-config.h exists in the build include directory
-echo "Checking for llvm-config.h in: $WORKING_DIR/llvm-project/build/include/llvm/Config"
-ls "$WORKING_DIR/llvm-project/build/include/llvm/Config/llvm-config.h" || { echo "llvm-config.h not found. Exiting."; exit 1; }
-
-# Build llvmlite
-cd "$WORKING_DIR/llvmlite"
-export CXXFLAGS="-I$WORKING_DIR/llvm-project/build/include"
-export LLVM_CONFIG="$WORKING_DIR/llvm-project/build/bin/llvm-config"
-
+cd $WORKING_DIR/llvmlite
+# Build & install llvmlite
+export CMAKE_PREFIX_PATH=$LLVM_INSTALL_DIR/lib/cmake/llvm
+export CXXFLAGS="-fPIC"
 python3.12 -m pip install .
-cd $WORKING_DIR
 
 echo "-------------------successfully Installed llvmlite----------------------"
 
@@ -156,8 +135,9 @@ export PKG_CONFIG_PATH="$OpenBLASInstallPATH/lib/pkgconfig:${PKG_CONFIG_PATH}"
 cd ..
 echo "------------openblas installed--------------------"
 
-python3.12 -m pip install numpy==2.0.2 setuptools
+python3.12 -m pip install numpy==1.26.4 setuptools
 
+cd $WORKING_DIR
 #clone repository
 git clone $PACKAGE_URL
 cd  $PACKAGE_DIR
@@ -170,9 +150,6 @@ export CXXFLAGS=-I/usr/include
 # echo "after CXXFLAGS............$CXXFLAGS........."
 
 PYTHON_VERSION=$(python3.12 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
-#sed -i '/#include "dynamic_annotations.h".*\/\*/d' /usr/include/python${PYTHON_VERSION}/internal/pycore_atomic.h
-#sed -i '1i#include "dynamic_annotations.h"   /* _Py_ANNOTATE_MEMORY_ORDER */' /usr/include/python${PYTHON_VERSION}/internal/pycore_atomic.h
-
 
 #install
 if ! python3.12 -m pip install . ; then
@@ -182,18 +159,18 @@ if ! python3.12 -m pip install . ; then
     exit 1
 fi
 
-# #test
-# cd $WORKING_DIR
-# if ! python3.12 -c "import numba; import numba.core.annotations; import numba.core.datamodel; import numba.core.rewrites; import numba.core.runtime; import numba.core.typing; import numba.core.unsafe; import numba.experimental.jitclass; import numba.np.ufunc; import numba.pycc; import numba.scripts; import numba.testing; import numba.tests; import numba.tests.npyufunc;"; then
-#     echo "--------------------$PACKAGE_NAME:Install_success_but_test_fails---------------------"
-#     echo "$PACKAGE_URL $PACKAGE_NAME"
-#     echo "$PACKAGE_NAME  |  $PACKAGE_URL | $PACKAGE_VERSION | GitHub | Fail |  Install_success_but_test_Fails"
-#     exit 2
-# else
-#     echo "------------------$PACKAGE_NAME:Install_&_test_both_success-------------------------"
-#     echo "$PACKAGE_URL $PACKAGE_NAME"
-#     echo "$PACKAGE_NAME  |  $PACKAGE_URL | $PACKAGE_VERSION | GitHub  | Pass |  Both_Install_and_Test_Success"
-#     exit 0
-# fi
+#test
+cd $WORKING_DIR
+if ! python3.12 -c "import numba; import numba.core.annotations; import numba.core.datamodel; import numba.core.rewrites; import numba.core.runtime; import numba.core.typing; import numba.core.unsafe; import numba.experimental.jitclass; import numba.np.ufunc; import numba.pycc; import numba.scripts; import numba.testing; import numba.tests; import numba.tests.npyufunc;"; then
+    echo "--------------------$PACKAGE_NAME:Install_success_but_test_fails---------------------"
+    echo "$PACKAGE_URL $PACKAGE_NAME"
+    echo "$PACKAGE_NAME  |  $PACKAGE_URL | $PACKAGE_VERSION | GitHub | Fail |  Install_success_but_test_Fails"
+    exit 2
+else
+    echo "------------------$PACKAGE_NAME:Install_&_test_both_success-------------------------"
+    echo "$PACKAGE_URL $PACKAGE_NAME"
+    echo "$PACKAGE_NAME  |  $PACKAGE_URL | $PACKAGE_VERSION | GitHub  | Pass |  Both_Install_and_Test_Success"
+    exit 0
+fi
 
-# #Pytest taking more than 5 hours,so we are skipping pytest.
+
