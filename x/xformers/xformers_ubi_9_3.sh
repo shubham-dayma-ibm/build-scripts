@@ -33,10 +33,17 @@ yum install -y git gcc-toolset-13 ninja-build rust cargo python-devel python-pip
 
 source /opt/rh/gcc-toolset-13/enable
 
-curl -sL https://ftp2.osuosl.org/pub/ppc64el/openblas/latest/Openblas_0.3.29_ppc64le.tar.gz | tar xvf - -C /usr/local \
-&& export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig/
+echo "---------------------openblas installing---------------------"
+#install openblas
+#clone and install openblas from source
 
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib64:/usr/local/lib:/usr/lib64:/usr/lib
+git clone https://github.com/OpenMathLib/OpenBLAS
+cd OpenBLAS
+git checkout v0.3.32
+make -j${MAX_JOBS} TARGET=POWER9 BUILD_BFLOAT16=1 BINARY=64 USE_OPENMP=1 USE_THREAD=1 NUM_THREADS=120 DYNAMIC_ARCH=1 INTERFACE64=0
+make install
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib64:/usr/local/lib
+echo "--------------------openblas installed-------------------------------"
 
 # Clone repository
 cd $CURRENT_DIR
